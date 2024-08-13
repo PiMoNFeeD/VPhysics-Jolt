@@ -1103,8 +1103,13 @@ bool JoltPhysicsEnvironment::Save( const physsaveparams_t &params )
 			Log_Warning( LOG_VJolt, "Saving PIID_IPHYSICSMOTIONCONTROLLER is unsupported right now.\n" );
 			return false;
 		case PIID_IPHYSICSVEHICLECONTROLLER:
-			Log_Warning( LOG_VJolt, "Saving PIID_IPHYSICSVEHICLECONTROLLER is unsupported right now.\n" );
-			return false;
+		{
+			JoltPhysicsVehicleController *pVehicleController = reinterpret_cast<JoltPhysicsVehicleController*>(params.pObject);
+
+			recorder.Write( reinterpret_cast<uintptr_t>(pVehicleController) );
+			pVehicleController->SaveControllerState( recorder );
+			return true;
+		}
 		case PIID_IPHYSICSGAMETRACE:
 			Log_Warning( LOG_VJolt, "Saving PIID_IPHYSICSGAMETRACE is unsupported right now.\n" );
 			return false;
@@ -1216,8 +1221,36 @@ bool JoltPhysicsEnvironment::Restore( const physrestoreparams_t &params )
 			Log_Warning( LOG_VJolt, "Restoring PIID_IPHYSICSMOTIONCONTROLLER is unsupported right now.\n" );
 			return false;
 		case PIID_IPHYSICSVEHICLECONTROLLER:
-			Log_Warning( LOG_VJolt, "Restoring PIID_IPHYSICSVEHICLECONTROLLER is unsupported right now.\n" );
-			return false;
+		{
+			// PiMoN TODO: loaded vehicles have broken physics, you can easily roll them as if you are driving a bike
+			// I am yet to figure out if it's a wheel issue or a vehicle controller issue
+			uintp controllerPtr, carPtr;
+			vehicleparams_t vehicleParams;
+			unsigned int vehicleType;
+			size_t wheelsCount;
+
+			recorder.Read( controllerPtr );
+			recorder.Read( carPtr );
+			recorder.ReadBytes( &vehicleParams, sizeof( vehicleParams ) );
+			recorder.Read( vehicleType );
+
+			JoltPhysicsObject *pJoltCarBodyObject = LookupPhysicsSaveRestorePointer< JoltPhysicsObject>( carPtr );
+			JoltPhysicsVehicleController *pJoltVehicleController = reinterpret_cast<JoltPhysicsVehicleController*>(CreateVehicleController( pJoltCarBodyObject, vehicleParams, vehicleType, nullptr ));
+			pJoltVehicleController->RestoreControllerState( recorder );
+
+			recorder.Read( wheelsCount );
+			for ( size_t i = 0; i < wheelsCount; i++ )
+			{
+				JoltPhysicsWheel wheel;
+				recorder.Read( wheel );
+				wheel.pObject = LookupPhysicsSaveRestorePointer<JoltPhysicsObject>( (uintp)wheel.pObject );
+				pJoltVehicleController->RestoreWheelState( i, wheel );
+			}
+
+			*params.ppObject = reinterpret_cast<void*>(pJoltVehicleController);
+			AddPhysicsSaveRestorePointer( controllerPtr, pJoltVehicleController );
+			return true;
+		}
 		case PIID_IPHYSICSGAMETRACE:
 			Log_Warning( LOG_VJolt, "Restoring PIID_IPHYSICSGAMETRACE is unsupported right now.\n" );
 			return false;

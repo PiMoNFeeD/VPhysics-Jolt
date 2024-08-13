@@ -57,6 +57,10 @@ public:
 	void OnPreSimulate( float flDeltaTime ) override;
 	void OnPostSimulate( float flDeltaTime ) override;
 
+	void SaveControllerState( JPH::StateRecorder &recorder );
+	void RestoreControllerState( JPH::StateRecorder &recorder );
+	void RestoreWheelState( int index, JoltPhysicsWheel &wheel );
+
 private:
 
 	void HandleBoostKey();

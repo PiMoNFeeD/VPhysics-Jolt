@@ -369,6 +369,47 @@ void JoltPhysicsVehicleController::OnPostSimulate( float flDeltaTime )
 
 //------------------------------------------------------------------------------------------------
 
+void JoltPhysicsVehicleController::SaveControllerState( JPH::StateRecorder &recorder )
+{
+	recorder.Write( reinterpret_cast<uintptr_t>(m_pCarBodyObject) );
+	recorder.WriteBytes( &m_VehicleParams, sizeof( m_VehicleParams ) );
+	recorder.Write( m_VehicleType );
+	recorder.Write( m_OperatingParams );
+	recorder.Write( m_ControlParams );
+	recorder.Write( m_TotalWheelMass );
+	recorder.Write( m_InternalState );
+	recorder.Write( m_Wheels.size() );
+	recorder.WriteBytes( m_Wheels.data(), sizeof( JoltPhysicsWheel ) * m_Wheels.size() );
+}
+
+//------------------------------------------------------------------------------------------------
+
+void JoltPhysicsVehicleController::RestoreControllerState( JPH::StateRecorder &recorder )
+{
+	// PiMoN: car body object, vehicle params and type are serialized in JoltPhysicsEnvironment::Restore, before this object is created
+	recorder.Read( m_OperatingParams );
+	recorder.Read( m_ControlParams );
+	recorder.Read( m_TotalWheelMass );
+	recorder.Read( m_InternalState );
+	// PiMoN: wheels too, after this object is created
+}
+
+//------------------------------------------------------------------------------------------------
+
+void JoltPhysicsVehicleController::RestoreWheelState( int index, JoltPhysicsWheel &wheel )
+{
+	VJoltAssert( index < int( m_Wheels.size() ) );
+
+	if ( index < int( m_Wheels.size() ) )
+	{
+		// PiMoN TODO: should not construct wheel objects in the first place when loading save data!
+		m_pEnvironment->DestroyObject( m_Wheels[index].pObject );
+		m_Wheels[index] = wheel;
+	}
+}
+
+//------------------------------------------------------------------------------------------------
+
 void JoltPhysicsVehicleController::CreateWheel( JPH::VehicleConstraintSettings &vehicleSettings, matrix3x4_t& bodyMatrix, int axleIdx, int wheelIdx )
 {
 	const vehicle_axleparams_t &axle = m_VehicleParams.axles[ axleIdx ];
