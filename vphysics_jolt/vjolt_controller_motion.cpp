@@ -154,3 +154,11 @@ void JoltPhysicsMotionController::OnPreSimulate( float flDeltaTime )
 		}
 	}
 }
+
+//-------------------------------------------------------------------------------------------------
+
+void JoltPhysicsMotionController::SaveObjects( JPH::StateRecorder &recorder )
+{
+	recorder.Write( m_pObjects.size() );
+	recorder.WriteBytes( m_pObjects.data(), sizeof( uintptr_t ) * m_pObjects.size() );
+}

@@ -1100,8 +1100,13 @@ bool JoltPhysicsEnvironment::Save( const physsaveparams_t &params )
 			// This just returns false in regular VPhysics.
 			return false;
 		case PIID_IPHYSICSMOTIONCONTROLLER:
-			Log_Warning( LOG_VJolt, "Saving PIID_IPHYSICSMOTIONCONTROLLER is unsupported right now.\n" );
-			return false;
+		{
+			JoltPhysicsMotionController* pMotionController = reinterpret_cast<JoltPhysicsMotionController*>(params.pObject);
+
+			recorder.Write( reinterpret_cast<uintptr_t>(pMotionController) );
+			pMotionController->SaveObjects( recorder );
+			return true;
+		}
 		case PIID_IPHYSICSVEHICLECONTROLLER:
 		{
 			JoltPhysicsVehicleController *pVehicleController = reinterpret_cast<JoltPhysicsVehicleController*>(params.pObject);
@@ -1218,8 +1223,26 @@ bool JoltPhysicsEnvironment::Restore( const physrestoreparams_t &params )
 			Log_Warning( LOG_VJolt, "Restoring PIID_IPHYSICSPLAYERCONTROLLER is unsupported right now.\n" );
 			return false;
 		case PIID_IPHYSICSMOTIONCONTROLLER:
-			Log_Warning( LOG_VJolt, "Restoring PIID_IPHYSICSMOTIONCONTROLLER is unsupported right now.\n" );
-			return false;
+		{
+			uintp originalPtr;
+			size_t objectsCount;
+
+			recorder.Read( originalPtr );
+			recorder.Read( objectsCount );
+
+			JoltPhysicsMotionController* pJoltMotionController = new JoltPhysicsMotionController( NULL );
+			for ( size_t i = 0; i < objectsCount; i++ )
+			{
+				uintp objectPtr;
+				recorder.Read( objectPtr );
+				JoltPhysicsObject* pJoltObject = LookupPhysicsSaveRestorePointer<JoltPhysicsObject>( objectPtr );
+				pJoltMotionController->AttachObject( pJoltObject, true );
+			}
+
+			*params.ppObject = reinterpret_cast<void*>(pJoltMotionController);
+			AddPhysicsSaveRestorePointer( originalPtr, pJoltMotionController );
+			return true;
+		}
 		case PIID_IPHYSICSVEHICLECONTROLLER:
 		{
 			// PiMoN TODO: loaded vehicles have broken physics, you can easily roll them as if you are driving a bike
