@@ -169,3 +169,40 @@ void JoltPhysicsShadowController::OnPreSimulate( float flDeltaTime )
 
 	m_secondsToArrival = Max( m_secondsToArrival - flDeltaTime, 0.0f );
 }
+
+//-------------------------------------------------------------------------------------------------
+
+void JoltPhysicsShadowController::SaveControllerState( JPH::StateRecorder &recorder )
+{
+	// PiMoN TODO: I actually have no idea what to save here...
+	recorder.Write( m_targetPosition );
+	recorder.Write( m_targetRotation );
+	recorder.Write( m_secondsToArrival );
+	recorder.Write( m_maxSpeed );
+	recorder.Write( m_maxDampSpeed );
+	recorder.Write( m_maxAngular );
+	recorder.Write( m_maxDampAngular );
+	recorder.Write( m_teleportDistance );
+	recorder.Write( m_isPhysicallyControlled );
+	recorder.Write( m_allowTranslation );
+	recorder.Write( m_allowRotation );
+	recorder.Write( m_enabled );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void JoltPhysicsShadowController::RestoreControllerState( JPH::StateRecorder &recorder )
+{
+	recorder.Read( m_targetPosition );
+	recorder.Read( m_targetRotation );
+	recorder.Read( m_secondsToArrival );
+	recorder.Read( m_maxSpeed );
+	recorder.Read( m_maxDampSpeed );
+	recorder.Read( m_maxAngular );
+	recorder.Read( m_maxDampAngular );
+	recorder.Read( m_teleportDistance );
+	recorder.Read( m_isPhysicallyControlled );
+	recorder.Read( m_allowTranslation );
+	recorder.Read( m_allowRotation );
+	recorder.Read( m_enabled );
+}

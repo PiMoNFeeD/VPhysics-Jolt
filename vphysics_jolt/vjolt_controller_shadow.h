@@ -32,6 +32,9 @@ public:
 	// IJoltPhysicsController
 	void OnPreSimulate( float flDeltaTime ) override;
 
+	void SaveControllerState( JPH::StateRecorder &recorder );
+	void RestoreControllerState( JPH::StateRecorder &recorder );
+
 private:
 	JoltPhysicsObject *m_pObject = nullptr;
 
