@@ -39,6 +39,8 @@ public:
 	void AddConstraint( JoltPhysicsConstraint *pConstraint );
 	void RemoveConstraint( JoltPhysicsConstraint *pConstraint );
 
+	void SaveConstraintGroup( JPH::StateRecorder &recorder );
+
 private:
 	std::vector< JoltPhysicsConstraint * >	m_pConstraints;
 	constraint_groupparams_t				m_ErrorParams = {};
@@ -47,7 +49,7 @@ private:
 class JoltPhysicsConstraint final : public IPhysicsConstraint, public IJoltObjectDestroyedListener
 {
 public:
-	JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEnvironment, IPhysicsObject *pReferenceObject, IPhysicsObject *pAttachedObject, constraintType_t Type = CONSTRAINT_UNKNOWN, JPH::Constraint* pConstraint = nullptr, void *pGameData = nullptr );
+	JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEnvironment, IPhysicsObject *pReferenceObject, IPhysicsObject *pAttachedObject, constraintType_t Type = CONSTRAINT_UNKNOWN, JPH::Constraint* pConstraint = nullptr, void *pGameData = nullptr, IPhysicsConstraintGroup *pGroup = nullptr );
 	~JoltPhysicsConstraint() override;
 
 	void			Activate() override;

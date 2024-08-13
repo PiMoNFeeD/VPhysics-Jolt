@@ -1079,8 +1079,13 @@ bool JoltPhysicsEnvironment::Save( const physsaveparams_t &params )
 			Log_Warning( LOG_VJolt, "Saving PIID_IPHYSICSSPRING is unsupported right now.\n" );
 			return false;
 		case PIID_IPHYSICSCONSTRAINTGROUP:
-			Log_Warning( LOG_VJolt, "Saving PIID_IPHYSICSCONSTRAINTGROUP is unsupported right now.\n" );
-			return false;
+		{
+			JoltPhysicsConstraintGroup *pConstraintGroup = reinterpret_cast<JoltPhysicsConstraintGroup*>(params.pObject);
+
+			recorder.Write( reinterpret_cast<uintptr_t>(pConstraintGroup) );
+			pConstraintGroup->SaveConstraintGroup( recorder );
+			return true;
+		}
 		case PIID_IPHYSICSCONSTRAINT:
 		{
 			JoltPhysicsConstraint *pConstraint = reinterpret_cast< JoltPhysicsConstraint * >( params.pObject );
@@ -1183,17 +1188,29 @@ bool JoltPhysicsEnvironment::Restore( const physrestoreparams_t &params )
 			Log_Warning( LOG_VJolt, "Restoring PIID_IPHYSICSSPRING is unsupported right now.\n" );
 			return false;
 		case PIID_IPHYSICSCONSTRAINTGROUP:
-			Log_Warning( LOG_VJolt, "Restoring PIID_IPHYSICSCONSTRAINTGROUP is unsupported right now.\n" );
-			return false;
+		{
+			uintp originalPtr;
+			constraint_groupparams_t groupParams;
+			recorder.Read( originalPtr );
+			recorder.Read( groupParams );
+
+			JoltPhysicsConstraintGroup *pJoltConstraintGroup = new JoltPhysicsConstraintGroup();
+			pJoltConstraintGroup->SetErrorParams( groupParams );
+
+			*params.ppObject = reinterpret_cast<void*>(pJoltConstraintGroup);
+			AddPhysicsSaveRestorePointer( originalPtr, pJoltConstraintGroup );
+			return true;
+		}
 		case PIID_IPHYSICSCONSTRAINT:
 		{
-			uintp constraintPtr, refObjectPtr, attObjectPtr;
+			uintp constraintPtr, refObjectPtr, attObjectPtr, groupPtr;
 			constraintType_t type;
 
 			recorder.Read( constraintPtr );
 			recorder.Read( refObjectPtr );
 			recorder.Read( attObjectPtr );
-			
+			recorder.Read( groupPtr );
+
 			recorder.Read( type );
 			JPH::ConstraintSettings::ConstraintResult result = JPH::ConstraintSettings::sRestoreFromBinaryState( recorder );
 
@@ -1205,12 +1222,13 @@ bool JoltPhysicsEnvironment::Restore( const physrestoreparams_t &params )
 
 			JoltPhysicsObject* pRefObject = LookupPhysicsSaveRestorePointer< JoltPhysicsObject >( refObjectPtr );
 			JoltPhysicsObject* pAttObject = LookupPhysicsSaveRestorePointer< JoltPhysicsObject >( attObjectPtr );
+			JoltPhysicsConstraintGroup* pGroup = LookupPhysicsSaveRestorePointer< JoltPhysicsConstraintGroup >( groupPtr );
 
 			const JPH::TwoBodyConstraintSettings *pSettings = static_cast< const JPH::TwoBodyConstraintSettings * >( result.Get().GetPtr() );
 			JPH::Constraint *pConstraint = bodyInterface.CreateConstraint( pSettings, pRefObject->GetBodyID(), pAttObject->GetBodyID() );
 			pConstraint->RestoreState( recorder );
 			m_PhysicsSystem.AddConstraint( pConstraint );
-			JoltPhysicsConstraint* pJoltConstraint = new JoltPhysicsConstraint( this, pRefObject, pAttObject, type, pConstraint, params.pGameData );
+			JoltPhysicsConstraint* pJoltConstraint = new JoltPhysicsConstraint( this, pRefObject, pAttObject, type, pConstraint, params.pGameData, pGroup );
 			*params.ppObject = reinterpret_cast<void*>( pJoltConstraint );
 			AddPhysicsSaveRestorePointer( constraintPtr, pJoltConstraint );
 			return true;

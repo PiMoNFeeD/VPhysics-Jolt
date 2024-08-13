@@ -86,7 +86,15 @@ void JoltPhysicsConstraintGroup::RemoveConstraint( JoltPhysicsConstraint *pConst
 
 //-------------------------------------------------------------------------------------------------
 
-JoltPhysicsConstraint::JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEnvironment, IPhysicsObject *pReferenceObject, IPhysicsObject *pAttachedObject, constraintType_t Type, JPH::Constraint* pConstraint, void *pGameData )
+void JoltPhysicsConstraintGroup::SaveConstraintGroup( JPH::StateRecorder &recorder )
+{
+	recorder.Write( m_ErrorParams );
+	// PiMoN: attached constraints will attach themselves to the group, as they are restored AFTER the group, so don't save them
+}
+
+//-------------------------------------------------------------------------------------------------
+
+JoltPhysicsConstraint::JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEnvironment, IPhysicsObject *pReferenceObject, IPhysicsObject *pAttachedObject, constraintType_t Type, JPH::Constraint* pConstraint, void *pGameData, IPhysicsConstraintGroup *pGroup )
 	: m_pPhysicsEnvironment( pPhysicsEnvironment )
 	, m_pPhysicsSystem( pPhysicsEnvironment->GetPhysicsSystem() )
 	, m_pObjReference( static_cast<JoltPhysicsObject*>( pReferenceObject ) )
@@ -97,6 +105,9 @@ JoltPhysicsConstraint::JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEn
 {
 	m_pObjReference->AddDestroyedListener( this );
 	m_pObjAttached->AddDestroyedListener( this );
+
+	if ( pGroup )
+		SetGroup( pGroup );
 }
 
 JoltPhysicsConstraint::~JoltPhysicsConstraint()
@@ -603,6 +614,7 @@ void JoltPhysicsConstraint::InitialisePulley( IPhysicsConstraintGroup *pGroup, c
 
 void JoltPhysicsConstraint::SaveConstraintSettings( JPH::StateRecorder &recorder )
 {
+	recorder.Write( reinterpret_cast<uintptr_t>(m_pGroup) );
 	recorder.Write( m_ConstraintType );
 	auto settings = m_pConstraint->GetConstraintSettings();
 	settings->SaveBinaryState( recorder );
