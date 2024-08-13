@@ -1067,6 +1067,7 @@ bool JoltPhysicsEnvironment::Save( const physsaveparams_t &params )
 			JPH::BodyCreationSettings bodyCreationSettings = pObject->GetBody()->GetBodyCreationSettings();
 
 			recorder.Write( reinterpret_cast<uintptr_t>( pObject ) );
+			pObject->GetBody()->GetShape()->SaveBinaryState( recorder ); // PiMoN: need to save this for objects without collision model (car wheels)
 			bodyCreationSettings.SaveBinaryState( recorder );
 			pObject->SaveObjectState( recorder );
 			return true;
@@ -1138,6 +1139,22 @@ bool JoltPhysicsEnvironment::Restore( const physrestoreparams_t &params )
 			uintp originalPtr;
 
 			recorder.Read( originalPtr );
+
+			JPH::ShapeSettings::ShapeResult result = JPH::Shape::sRestoreFromBinaryState( recorder );
+
+			// PiMoN: if there is no collision model, it likely means that this object is car's wheels
+			if ( !pShape )
+			{
+				// we need our saved shape, or we're gonna crash...
+				if ( result.HasError() )
+				{
+					Log_Warning( LOG_VJolt, "Error restoring object: %s.\n", result.GetError().c_str() );
+					return false;
+				}
+
+				pShape = result.Get();
+			}
+
 			bodyCreationSettings.RestoreBinaryState( recorder );
 			bodyCreationSettings.SetShape( pShape );
 			JPH::Body *pBody = bodyInterface.CreateBody( bodyCreationSettings );
