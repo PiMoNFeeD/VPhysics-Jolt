@@ -92,9 +92,22 @@ void JoltPhysicsConstraintGroup::SaveConstraintGroup( JPH::StateRecorder &record
 	// PiMoN: attached constraints will attach themselves to the group, as they are restored AFTER the group, so don't save them
 }
 
+void JoltPhysicsConstraintGroup::RestoreConstraintGroup( JPH::StateRecorder &recorder )
+{
+	recorder.Read( m_ErrorParams );
+
+	if ( m_ErrorParams.errorTolerance == 0.0f && m_ErrorParams.minErrorTicks == 0 )
+	{
+		constraint_groupparams_t tmp;
+		tmp.Defaults();
+		m_ErrorParams.minErrorTicks = tmp.minErrorTicks;
+		m_ErrorParams.errorTolerance = tmp.errorTolerance;
+	}
+}
+
 //-------------------------------------------------------------------------------------------------
 
-JoltPhysicsConstraint::JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEnvironment, IPhysicsObject *pReferenceObject, IPhysicsObject *pAttachedObject, constraintType_t Type, JPH::Constraint* pConstraint, void *pGameData, IPhysicsConstraintGroup *pGroup )
+JoltPhysicsConstraint::JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEnvironment, IPhysicsObject *pReferenceObject, IPhysicsObject *pAttachedObject, constraintType_t Type, JPH::Constraint* pConstraint, void *pGameData )
 	: m_pPhysicsEnvironment( pPhysicsEnvironment )
 	, m_pPhysicsSystem( pPhysicsEnvironment->GetPhysicsSystem() )
 	, m_pObjReference( static_cast<JoltPhysicsObject*>( pReferenceObject ) )
@@ -105,9 +118,6 @@ JoltPhysicsConstraint::JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEn
 {
 	m_pObjReference->AddDestroyedListener( this );
 	m_pObjAttached->AddDestroyedListener( this );
-
-	if ( pGroup )
-		SetGroup( pGroup );
 }
 
 JoltPhysicsConstraint::~JoltPhysicsConstraint()
@@ -157,6 +167,22 @@ IPhysicsObject *JoltPhysicsConstraint::GetReferenceObject() const
 IPhysicsObject *JoltPhysicsConstraint::GetAttachedObject() const
 {
 	return m_pObjAttached;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void JoltPhysicsConstraint::SetGroup( IPhysicsConstraintGroup *pGroup )
+{
+	if ( m_pGroup )
+		m_pGroup->RemoveConstraint( this );
+	m_pGroup = static_cast< JoltPhysicsConstraintGroup * >( pGroup );
+	if ( m_pGroup )
+		m_pGroup->AddConstraint( this );
+}
+
+IPhysicsConstraintGroup *JoltPhysicsConstraint::GetGroup() const
+{
+	return m_pGroup;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -587,8 +613,8 @@ void JoltPhysicsConstraint::InitialisePulley( IPhysicsConstraintGroup *pGroup, c
 	m_ConstraintType = CONSTRAINT_PULLEY;
 
 	// Get our bodies
-	JPH::Body* refBody = m_pObjReference->GetBody();
-	JPH::Body* attBody = m_pObjAttached->GetBody();
+	JPH::Body *refBody = m_pObjReference->GetBody();
+	JPH::Body *attBody = m_pObjAttached->GetBody();
 
 	JPH::PulleyConstraintSettings settings;
 	settings.mNumVelocityStepsOverride = vjolt_constraint_velocity_substeps.GetInt();
@@ -614,7 +640,6 @@ void JoltPhysicsConstraint::InitialisePulley( IPhysicsConstraintGroup *pGroup, c
 
 void JoltPhysicsConstraint::SaveConstraintSettings( JPH::StateRecorder &recorder )
 {
-	recorder.Write( reinterpret_cast<uintptr_t>(m_pGroup) );
 	recorder.Write( m_ConstraintType );
 	auto settings = m_pConstraint->GetConstraintSettings();
 	settings->SaveBinaryState( recorder );
@@ -622,15 +647,6 @@ void JoltPhysicsConstraint::SaveConstraintSettings( JPH::StateRecorder &recorder
 }
 
 //-------------------------------------------------------------------------------------------------
-
-void JoltPhysicsConstraint::SetGroup( IPhysicsConstraintGroup *pGroup )
-{
-	if ( m_pGroup )
-		m_pGroup->RemoveConstraint( this );
-	m_pGroup = static_cast< JoltPhysicsConstraintGroup * >( pGroup );
-	if ( m_pGroup )
-		m_pGroup->AddConstraint( this );
-}
 
 void JoltPhysicsConstraint::DestroyConstraint()
 {

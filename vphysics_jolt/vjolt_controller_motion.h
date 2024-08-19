@@ -26,8 +26,6 @@ public:
 	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject ) override;
 	void OnPreSimulate( float flDeltaTime ) override;
 
-	void SaveObjects( JPH::StateRecorder &recorder );
-
 private:
 	IMotionEvent *m_pMotionEvent;
 

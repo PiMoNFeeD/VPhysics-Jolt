@@ -1196,6 +1196,13 @@ bool JoltPhysicsObject::IsControlledByGame() const
 
 void JoltPhysicsObject::SaveObjectState( JPH::StateRecorder &recorder )
 {
+	m_pBody->GetBodyCreationSettings().SaveBinaryState( recorder );
+
+	// PiMoN HACK!!!
+	m_pBody->GetShape()->SaveBinaryState( recorder ); // need to save this for objects without collision model (car wheels, or any procedural sphere)
+	recorder.Write( m_pBody->GetShape()->GetCenterOfMass() ); // need to save this for objects with collision model because we don't create a shape but rather use an existing one
+	// HACK END
+
 	m_pBody->SaveState( recorder );
 
 	// Josh: Do not write m_pGameData, as this is passed in, in UnserializeObjectFromBuffer.
@@ -1259,11 +1266,7 @@ void JoltPhysicsObject::RestoreObjectState( JPH::StateRecorder &recorder )
 	bool bShadowController;
 	recorder.Read( bShadowController );
 	if ( bShadowController )
-	{
-		JoltPhysicsShadowController *pShadowController = static_cast<JoltPhysicsShadowController*>(m_pEnvironment->CreateShadowController( this, false, false )); // doesn't matter the arguments
-		pShadowController->RestoreControllerState( recorder );
-		m_pShadowController = pShadowController;
-	}
+		m_pShadowController = static_cast< JoltPhysicsShadowController * >( m_pEnvironment->CreateShadowController( this, recorder ) );
 
 	// Recompute states.
 	UpdateMaterialProperties();

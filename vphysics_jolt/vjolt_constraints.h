@@ -40,6 +40,7 @@ public:
 	void RemoveConstraint( JoltPhysicsConstraint *pConstraint );
 
 	void SaveConstraintGroup( JPH::StateRecorder &recorder );
+	void RestoreConstraintGroup( JPH::StateRecorder &recorder );
 
 private:
 	std::vector< JoltPhysicsConstraint * >	m_pConstraints;
@@ -49,7 +50,7 @@ private:
 class JoltPhysicsConstraint final : public IPhysicsConstraint, public IJoltObjectDestroyedListener
 {
 public:
-	JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEnvironment, IPhysicsObject *pReferenceObject, IPhysicsObject *pAttachedObject, constraintType_t Type = CONSTRAINT_UNKNOWN, JPH::Constraint* pConstraint = nullptr, void *pGameData = nullptr, IPhysicsConstraintGroup *pGroup = nullptr );
+	JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEnvironment, IPhysicsObject *pReferenceObject, IPhysicsObject *pAttachedObject, constraintType_t Type = CONSTRAINT_UNKNOWN, JPH::Constraint* pConstraint = nullptr, void *pGameData = nullptr );
 	~JoltPhysicsConstraint() override;
 
 	void			Activate() override;
@@ -60,6 +61,9 @@ public:
 
 	IPhysicsObject *GetReferenceObject() const override;
 	IPhysicsObject *GetAttachedObject() const override;
+
+	void						SetGroup( IPhysicsConstraintGroup* pGroup );
+	IPhysicsConstraintGroup*	GetGroup() const;
 
 	void			SetLinearMotor( float speed, float maxLinearImpulse ) override;
 	void			SetAngularMotor( float rotSpeed, float maxAngularImpulse ) override;
@@ -86,8 +90,6 @@ public:
 	void SaveConstraintSettings( JPH::StateRecorder &recorder );
 
 private:
-
-	void SetGroup( IPhysicsConstraintGroup *pGroup );
 
 	void DestroyConstraint();
 

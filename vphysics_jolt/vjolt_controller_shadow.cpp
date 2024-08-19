@@ -20,6 +20,12 @@ JoltPhysicsShadowController::JoltPhysicsShadowController( JoltPhysicsObject *pOb
 	m_pObject->SetCallbackFlags( m_savedCallbackFlags | CALLBACK_SHADOW_COLLISION );
 }
 
+JoltPhysicsShadowController::JoltPhysicsShadowController( JoltPhysicsObject *pObject, JPH::StateRecorder &recorder )
+	: m_pObject( pObject )
+{
+	RestoreControllerState( recorder );
+}
+
 JoltPhysicsShadowController::~JoltPhysicsShadowController()
 {
 	if ( !( m_pObject->GetCallbackFlags() & CALLBACK_MARKED_FOR_DELETE ) )

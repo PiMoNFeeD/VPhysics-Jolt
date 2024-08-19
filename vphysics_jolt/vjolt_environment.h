@@ -79,6 +79,7 @@ public:
 	void DestroyConstraintGroup( IPhysicsConstraintGroup* pGroup ) override;
 
 	IPhysicsShadowController* CreateShadowController( IPhysicsObject* pObject, bool allowTranslation, bool allowRotation ) override;
+	IPhysicsShadowController* CreateShadowController( IPhysicsObject* pObject, JPH::StateRecorder& recorder );
 	void DestroyShadowController( IPhysicsShadowController* ) override;
 
 	IPhysicsPlayerController* CreatePlayerController( IPhysicsObject* pObject ) override;
@@ -88,6 +89,7 @@ public:
 	void DestroyMotionController( IPhysicsMotionController* pController ) override;
 
 	IPhysicsVehicleController* CreateVehicleController( IPhysicsObject* pVehicleBodyObject, const vehicleparams_t& params, unsigned int nVehicleType, IPhysicsGameTrace* pGameTrace ) override;
+	IPhysicsVehicleController* CreateVehicleController( IPhysicsObject* pVehicleBodyObject, int iWheelCount, JoltPhysicsObject** pWheels, JPH::StateRecorder& recorder );
 	void DestroyVehicleController( IPhysicsVehicleController* ) override;
 
 	void SetCollisionSolver( IPhysicsCollisionSolver* pSolver ) override;

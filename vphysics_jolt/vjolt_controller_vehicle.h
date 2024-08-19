@@ -4,13 +4,6 @@
 #include "vjolt_object.h" // IJoltObjectDestroyedListener
 #include "vjolt_environment.h" // IJoltPhysicsController
 
-struct JoltPhysicsWheel
-{
-	JoltPhysicsObject* pObject = nullptr;
-	bool InWater = false;
-	float Depth = 0.0f;
-};
-
 struct JoltPhysicsInternalVehicleState
 {
 	bool  EngineDisabled = false;
@@ -25,6 +18,7 @@ public:
 	static constexpr int MaxWheels = VEHICLE_MAX_WHEEL_COUNT;
 
 	JoltPhysicsVehicleController( JoltPhysicsEnvironment *pEnvironment, JPH::PhysicsSystem *pPhysicsSystem, JoltPhysicsObject *pVehicleBodyObject, const vehicleparams_t &params, unsigned int nVehicleType, IPhysicsGameTrace *pGameTrace );
+	JoltPhysicsVehicleController( JoltPhysicsEnvironment *pEnvironment, JPH::PhysicsSystem *pPhysicsSystem, JoltPhysicsObject *pVehicleBodyObject, int iWheelCount, JoltPhysicsObject **pWheels, JPH::StateRecorder &recorder );
 	~JoltPhysicsVehicleController() override;
 
 	void				Update( float dt, vehicle_controlparams_t &controls ) override;
@@ -37,6 +31,7 @@ public:
 	bool				GetWheelContactPoint( int index, Vector *pContactPoint, int *pSurfaceProps ) override;
 	void				SetSpringLength( int wheelIndex, float length ) override;
 	void				SetWheelFriction( int wheelIndex, float friction ) override;
+	IPhysicsObject *	GetBody();
 
 	void				OnVehicleEnter( void ) override;
 	void				OnVehicleExit( void ) override;
@@ -46,6 +41,9 @@ public:
 
 	void				GetCarSystemDebugData( vehicle_debugcarsystem_t &debugCarSystem ) override;
 	void				VehicleDataReload() override;
+
+	void				SaveControllerState( JPH::StateRecorder &recorder );
+	void				RestoreControllerState( JPH::StateRecorder &recorder );
 
 public:
 	// IJoltObjectDestroyedListener
@@ -57,16 +55,12 @@ public:
 	void OnPreSimulate( float flDeltaTime ) override;
 	void OnPostSimulate( float flDeltaTime ) override;
 
-	void SaveControllerState( JPH::StateRecorder &recorder );
-	void RestoreControllerState( JPH::StateRecorder &recorder );
-	void RestoreWheelState( int index, JoltPhysicsWheel &wheel );
-
 private:
 
 	void HandleBoostKey();
 	void HandleBoostDecay();
 
-	void CreateWheel( JPH::VehicleConstraintSettings &vehicleSettings, matrix3x4_t &bodyMatrix, int axleIdx, int wheelIdx );
+	void CreateWheel( JPH::VehicleConstraintSettings &vehicleSettings, matrix3x4_t &bodyMatrix, int axleIdx, int wheelIdx, bool bCreateWheelObjects );
 	void CreateWheels( JPH::VehicleConstraintSettings& vehicleSettings );
 
 	JPH::WheeledVehicleControllerSettings *CreateVehicleController();
@@ -85,7 +79,7 @@ private:
 	vehicle_operatingparams_t				m_OperatingParams = {};
 	vehicle_controlparams_t					m_ControlParams = {};
 
-	std::vector< JoltPhysicsWheel >			m_Wheels;
+	std::vector< JoltPhysicsObject * >		m_Wheels;
 
 	float									m_TotalWheelMass = 0.0f;
 	JoltPhysicsInternalVehicleState			m_InternalState;

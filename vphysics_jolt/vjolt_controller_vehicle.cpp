@@ -76,12 +76,30 @@ JoltPhysicsVehicleController::JoltPhysicsVehicleController( JoltPhysicsEnvironme
 	m_pPhysicsSystem->AddStepListener( m_VehicleConstraint );
 }
 
+JoltPhysicsVehicleController::JoltPhysicsVehicleController( JoltPhysicsEnvironment *pEnvironment, JPH::PhysicsSystem *pPhysicsSystem, JoltPhysicsObject *pVehicleBodyObject, int iWheelCount, JoltPhysicsObject **pWheels, JPH::StateRecorder &recorder )
+	: m_pEnvironment( pEnvironment )
+	, m_pPhysicsSystem( pPhysicsSystem )
+	, m_pCarBodyObject( pVehicleBodyObject )
+{
+	m_Wheels.reserve( iWheelCount );
+	for ( int i = 0; i < iWheelCount; i++ )
+		m_Wheels.push_back( pWheels[i] );
+
+	RestoreControllerState( recorder );
+
+	m_Tester = CreateVehicleCollisionTester( m_VehicleType, m_InternalState.LargestWheelRadius );
+
+	m_pCarBodyObject->AddDestroyedListener( this );
+	m_pPhysicsSystem->AddConstraint( m_VehicleConstraint );
+	m_pPhysicsSystem->AddStepListener( m_VehicleConstraint );
+}
+
 JoltPhysicsVehicleController::~JoltPhysicsVehicleController()
 {
 	DetachObject();
-
-	for ( auto &wheel : m_Wheels )
-		m_pEnvironment->DestroyObject( wheel.pObject );
+	
+	for ( JoltPhysicsObject *pWheel : m_Wheels )
+		m_pEnvironment->DestroyObject( pWheel );
 	m_Wheels.clear();
 }
 
@@ -129,7 +147,7 @@ IPhysicsObject *JoltPhysicsVehicleController::GetWheel( int index )
 	if ( index >= int( m_Wheels.size() ) )
 		return nullptr;
 
-	return m_Wheels[ index ].pObject;
+	return m_Wheels[ index ];
 }
 
 bool JoltPhysicsVehicleController::GetWheelContactPoint( int index, Vector *pContactPoint, int *pSurfaceProps )
@@ -165,6 +183,11 @@ void JoltPhysicsVehicleController::SetSpringLength( int wheelIndex, float length
 void JoltPhysicsVehicleController::SetWheelFriction( int wheelIndex, float friction )
 {
 
+}
+
+IPhysicsObject *JoltPhysicsVehicleController::GetBody()
+{
+	return m_pCarBodyObject;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -214,6 +237,44 @@ void JoltPhysicsVehicleController::GetCarSystemDebugData( vehicle_debugcarsystem
 void JoltPhysicsVehicleController::VehicleDataReload()
 {
 
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void JoltPhysicsVehicleController::SaveControllerState( JPH::StateRecorder &recorder )
+{
+	recorder.WriteBytes( &m_VehicleParams, sizeof( m_VehicleParams ) );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_VehicleParams.axles->wheels.materialIndex, recorder );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_VehicleParams.axles->wheels.brakeMaterialIndex, recorder );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_VehicleParams.axles->wheels.skidMaterialIndex, recorder );
+	m_VehicleConstraint->SaveState( recorder );
+	recorder.Write( m_VehicleType );
+	recorder.Write( m_OperatingParams );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_OperatingParams.skidMaterial, recorder );
+	recorder.Write( m_InternalState );
+}
+
+void JoltPhysicsVehicleController::RestoreControllerState( JPH::StateRecorder &recorder )
+{
+	recorder.ReadBytes( &m_VehicleParams, sizeof( m_VehicleParams ) );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_VehicleParams.axles->wheels.materialIndex, recorder );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_VehicleParams.axles->wheels.brakeMaterialIndex, recorder );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_VehicleParams.axles->wheels.skidMaterialIndex, recorder );
+
+	JPH::VehicleConstraintSettings vehicle;
+	vehicle.mUp					= VehicleUpVector;
+	vehicle.mForward			= VehicleForwardVector;
+	vehicle.mDrawConstraintSize = 0.1f;
+	CreateWheels( vehicle );
+	vehicle.mController = CreateVehicleController();
+
+	m_VehicleConstraint = new JPH::VehicleConstraint( *m_pCarBodyObject->GetBody(), vehicle );
+	m_VehicleConstraint->RestoreState( recorder );
+
+	recorder.Read( m_VehicleType );
+	recorder.Read( m_OperatingParams );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_OperatingParams.skidMaterial, recorder );
+	recorder.Read( m_InternalState );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -334,11 +395,11 @@ void JoltPhysicsVehicleController::OnPostSimulate( float flDeltaTime )
 		// what to do about that?..
 		// We just want the local rotation, and this seems to work (?)
 		QAngle newQuat = JoltToSource::Angle( wheelTransform.GetQuaternion() );
-		m_Wheels[ w ].pObject->EnableCollisions( false );
+		m_Wheels[ w ]->EnableCollisions( false );
 		// Set dummy wheel object pos/angles so the game code can update pose positions for wheels.
-		m_Wheels[ w ].pObject->SetPosition( newPos, newQuat, true );
+		m_Wheels[ w ]->SetPosition( newPos, newQuat, true );
 		// Wake it up so that the game bothers to do pose positions.
-		m_Wheels[ w ].pObject->Wake();
+		m_Wheels[ w ]->Wake();
 
 		if ( m_VehicleConstraint->GetWheels()[w]->HasContact() )
 			m_OperatingParams.wheelsInContact++;
@@ -370,56 +431,7 @@ void JoltPhysicsVehicleController::OnPostSimulate( float flDeltaTime )
 
 //------------------------------------------------------------------------------------------------
 
-void JoltPhysicsVehicleController::SaveControllerState( JPH::StateRecorder &recorder )
-{
-	recorder.Write( reinterpret_cast<uintptr_t>(m_pCarBodyObject) );
-	recorder.WriteBytes( &m_VehicleParams, sizeof( m_VehicleParams ) );
-	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_VehicleParams.axles->wheels.materialIndex, recorder );
-	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_VehicleParams.axles->wheels.brakeMaterialIndex, recorder );
-	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_VehicleParams.axles->wheels.skidMaterialIndex, recorder );
-	recorder.Write( m_VehicleType );
-	recorder.Write( m_OperatingParams );
-	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_OperatingParams.skidMaterial, recorder );
-	recorder.Write( m_ControlParams );
-	recorder.Write( m_TotalWheelMass );
-	recorder.Write( m_InternalState );
-	recorder.Write( m_Wheels.size() );
-	recorder.WriteBytes( m_Wheels.data(), sizeof( JoltPhysicsWheel ) * m_Wheels.size() );
-}
-
-//------------------------------------------------------------------------------------------------
-
-void JoltPhysicsVehicleController::RestoreControllerState( JPH::StateRecorder &recorder )
-{
-	// PiMoN: car body object, vehicle params and type are serialized in JoltPhysicsEnvironment::Restore, before this object is created
-	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_VehicleParams.axles->wheels.materialIndex, recorder );
-	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_VehicleParams.axles->wheels.brakeMaterialIndex, recorder );
-	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_VehicleParams.axles->wheels.skidMaterialIndex, recorder );
-	recorder.Read( m_OperatingParams );
-	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_OperatingParams.skidMaterial, recorder );
-	recorder.Read( m_ControlParams );
-	recorder.Read( m_TotalWheelMass );
-	recorder.Read( m_InternalState );
-	// PiMoN: wheels too, after this object is created
-}
-
-//------------------------------------------------------------------------------------------------
-
-void JoltPhysicsVehicleController::RestoreWheelState( int index, JoltPhysicsWheel &wheel )
-{
-	VJoltAssert( index < int( m_Wheels.size() ) );
-
-	if ( index < int( m_Wheels.size() ) )
-	{
-		// PiMoN TODO: should not construct wheel objects in the first place when loading save data!
-		m_pEnvironment->DestroyObject( m_Wheels[index].pObject );
-		m_Wheels[index] = wheel;
-	}
-}
-
-//------------------------------------------------------------------------------------------------
-
-void JoltPhysicsVehicleController::CreateWheel( JPH::VehicleConstraintSettings &vehicleSettings, matrix3x4_t& bodyMatrix, int axleIdx, int wheelIdx )
+void JoltPhysicsVehicleController::CreateWheel( JPH::VehicleConstraintSettings &vehicleSettings, matrix3x4_t& bodyMatrix, int axleIdx, int wheelIdx, bool bCreateWheelObjects )
 {
 	const vehicle_axleparams_t &axle = m_VehicleParams.axles[ axleIdx ];
 
@@ -437,6 +449,7 @@ void JoltPhysicsVehicleController::CreateWheel( JPH::VehicleConstraintSettings &
 	// Using radius in terms of Source units as we pass this to CreateSphereObject.
 	const float wheelVolume = M_PI * wheelWidth * Cube( wheelRadius );
 
+	if ( bCreateWheelObjects )
 	{
 		objectparams_t wheelParams =
 		{
@@ -460,7 +473,7 @@ void JoltPhysicsVehicleController::CreateWheel( JPH::VehicleConstraintSettings &
 		// Josh: The wheel is a fake object, so disable collisions on it.
 		pJoltWheelObject->EnableCollisions( false );
 
-		m_Wheels.push_back( JoltPhysicsWheel{ .pObject = pJoltWheelObject } );
+		m_Wheels.push_back( pJoltWheelObject );
 	}
 
 	const float steeringAngle = DEG2RAD( Max( m_VehicleParams.steering.degreesSlow, m_VehicleParams.steering.degreesFast ) );
@@ -510,7 +523,9 @@ void JoltPhysicsVehicleController::CreateWheels( JPH::VehicleConstraintSettings 
 {
 	matrix3x4_t carBodyMtx = GetBodyMatrix();
 
-	m_Wheels.reserve( m_VehicleParams.axleCount * m_VehicleParams.wheelsPerAxle );
+	bool bWheelsLoaded = !m_Wheels.empty();
+	if ( !bWheelsLoaded )
+		m_Wheels.reserve( m_VehicleParams.axleCount * m_VehicleParams.wheelsPerAxle );
 	vehicleSettings.mAntiRollBars.reserve( m_VehicleParams.axleCount );
 
 	m_TotalWheelMass = 0.0f;
@@ -520,7 +535,7 @@ void JoltPhysicsVehicleController::CreateWheels( JPH::VehicleConstraintSettings 
 	for ( int axle = 0; axle < m_VehicleParams.axleCount; axle++ )
 	{
 		for ( int wheel = 0; wheel < m_VehicleParams.wheelsPerAxle; wheel++ )
-			CreateWheel( vehicleSettings, carBodyMtx, axle, wheel );
+			CreateWheel( vehicleSettings, carBodyMtx, axle, wheel, !bWheelsLoaded );
 
 		// TODO(Josh): More than 2 wheels per axle.
 		VJoltAssert( m_VehicleParams.wheelsPerAxle == 2 );
