@@ -1205,7 +1205,7 @@ void JoltPhysicsObject::SaveObjectState( JPH::StateRecorder &recorder )
 	recorder.Write( m_callbackFlags );
 	recorder.Write( m_bStatic );
 	recorder.Write( m_bPinned );
-	recorder.Write( m_materialIndex );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_materialIndex, recorder );
 	recorder.Write( m_contents );
 	recorder.Write( m_flCachedMass );
 	recorder.Write( m_flCachedInvMass );
@@ -1246,7 +1246,7 @@ void JoltPhysicsObject::RestoreObjectState( JPH::StateRecorder &recorder )
 	recorder.Read( m_callbackFlags );
 	recorder.Read( m_bStatic );
 	recorder.Read( m_bPinned );
-	recorder.Read( m_materialIndex );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_materialIndex, recorder );
 	recorder.Read( m_contents );
 	recorder.Read( m_flCachedMass );
 	recorder.Read( m_flCachedInvMass );

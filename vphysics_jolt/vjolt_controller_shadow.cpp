@@ -1,6 +1,8 @@
 
 #include "cbase.h"
 
+#include "vjolt_surfaceprops.h"
+
 #include "vjolt_controller_shadow.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -174,7 +176,6 @@ void JoltPhysicsShadowController::OnPreSimulate( float flDeltaTime )
 
 void JoltPhysicsShadowController::SaveControllerState( JPH::StateRecorder &recorder )
 {
-	// PiMoN TODO: I actually have no idea what to save here...
 	recorder.Write( m_targetPosition );
 	recorder.Write( m_targetRotation );
 	recorder.Write( m_secondsToArrival );
@@ -187,6 +188,8 @@ void JoltPhysicsShadowController::SaveControllerState( JPH::StateRecorder &recor
 	recorder.Write( m_allowTranslation );
 	recorder.Write( m_allowRotation );
 	recorder.Write( m_enabled );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_savedMaterialIndex, recorder );
+	recorder.Write( m_savedCallbackFlags );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -205,4 +208,6 @@ void JoltPhysicsShadowController::RestoreControllerState( JPH::StateRecorder &re
 	recorder.Read( m_allowTranslation );
 	recorder.Read( m_allowRotation );
 	recorder.Read( m_enabled );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_savedMaterialIndex, recorder );
+	recorder.Read( m_savedCallbackFlags );
 }

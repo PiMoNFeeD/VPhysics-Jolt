@@ -2,6 +2,7 @@
 #include "cbase.h"
 
 #include "vjolt_layers.h"
+#include "vjolt_surfaceprops.h"
 
 #include "vjolt_controller_vehicle.h"
 
@@ -373,8 +374,12 @@ void JoltPhysicsVehicleController::SaveControllerState( JPH::StateRecorder &reco
 {
 	recorder.Write( reinterpret_cast<uintptr_t>(m_pCarBodyObject) );
 	recorder.WriteBytes( &m_VehicleParams, sizeof( m_VehicleParams ) );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_VehicleParams.axles->wheels.materialIndex, recorder );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_VehicleParams.axles->wheels.brakeMaterialIndex, recorder );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_VehicleParams.axles->wheels.skidMaterialIndex, recorder );
 	recorder.Write( m_VehicleType );
 	recorder.Write( m_OperatingParams );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().SaveJolt( m_OperatingParams.skidMaterial, recorder );
 	recorder.Write( m_ControlParams );
 	recorder.Write( m_TotalWheelMass );
 	recorder.Write( m_InternalState );
@@ -387,7 +392,11 @@ void JoltPhysicsVehicleController::SaveControllerState( JPH::StateRecorder &reco
 void JoltPhysicsVehicleController::RestoreControllerState( JPH::StateRecorder &recorder )
 {
 	// PiMoN: car body object, vehicle params and type are serialized in JoltPhysicsEnvironment::Restore, before this object is created
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_VehicleParams.axles->wheels.materialIndex, recorder );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_VehicleParams.axles->wheels.brakeMaterialIndex, recorder );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_VehicleParams.axles->wheels.skidMaterialIndex, recorder );
 	recorder.Read( m_OperatingParams );
+	JoltPhysicsMaterialIndexSaveOps::GetInstance().RestoreJolt( m_OperatingParams.skidMaterial, recorder );
 	recorder.Read( m_ControlParams );
 	recorder.Read( m_TotalWheelMass );
 	recorder.Read( m_InternalState );

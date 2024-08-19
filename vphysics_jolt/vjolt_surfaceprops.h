@@ -1,6 +1,8 @@
 
 #pragma once
 
+class JoltPhysicsSurfaceProps;
+
 struct JoltSurfaceProp
 {
 	surfacedata_t data;
@@ -14,6 +16,27 @@ public:
 
 	bool IsEmpty( const SaveRestoreFieldInfo_t &fieldInfo ) override;
 	void MakeEmpty( const SaveRestoreFieldInfo_t &fieldInfo ) override;
+
+	template<typename T> void SaveJolt( T &iMaterialIdx, JPH::StateRecorder &recorder )
+	{
+		const char *pMaterialName = JoltPhysicsSurfaceProps::GetInstance().GetPropName( iMaterialIdx );
+		if ( !pMaterialName )
+			pMaterialName = JoltPhysicsSurfaceProps::GetInstance().GetPropName( 0 );
+
+		int nMaterialNameLength = V_strlen( pMaterialName ) + 1;
+		recorder.Write( nMaterialNameLength );
+		recorder.WriteBytes( pMaterialName, nMaterialNameLength );
+	}
+	template<typename T> void RestoreJolt( T &iMaterialIdx, JPH::StateRecorder &recorder )
+	{
+		int nMaterialNameLength;
+		recorder.Read( nMaterialNameLength );
+
+		char szMaterialName[2048];
+		recorder.ReadBytes( szMaterialName, nMaterialNameLength );
+
+		iMaterialIdx = Max( JoltPhysicsSurfaceProps::GetInstance().GetSurfaceIndex( szMaterialName ), 0 );
+	}
 
 	static JoltPhysicsMaterialIndexSaveOps& GetInstance() { return s_Instance; }
 
