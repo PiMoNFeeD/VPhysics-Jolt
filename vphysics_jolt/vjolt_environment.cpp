@@ -1174,7 +1174,7 @@ bool JoltPhysicsEnvironment::Restore( const physrestoreparams_t &params )
 			bodyCreationSettings.SetShape( pShape );
 			JPH::Body *pBody = bodyInterface.CreateBody( bodyCreationSettings );
 			bodyInterface.AddBody( pBody->GetID(), JPH::EActivation::DontActivate );
-			JoltPhysicsObject *pJoltObject = new JoltPhysicsObject( pBody, this, params.pGameData, recorder );
+			JoltPhysicsObject *pJoltObject = new JoltPhysicsObject( pBody, this, params.pGameData, params.pName, recorder );
 
 			*params.ppObject = reinterpret_cast< void * >( pJoltObject );
 			AddPhysicsSaveRestorePointer( originalPtr, pJoltObject );
@@ -1430,7 +1430,7 @@ IPhysicsObject *JoltPhysicsEnvironment::UnserializeObjectFromBuffer( void *pGame
 	JPH::Body *pBody = bodyInterface.CreateBody( bodyCreationSettings );
 	bodyInterface.AddBody( pBody->GetID(), JPH::EActivation::Activate );
 
-	JoltPhysicsObject *pJoltObject = new JoltPhysicsObject( pBody, this, pGameData, recorder );
+	JoltPhysicsObject *pJoltObject = new JoltPhysicsObject( pBody, this, pGameData, "NoName", recorder );
 	pJoltObject->EnableCollisions( enableCollisions );
 	return pJoltObject;
 }

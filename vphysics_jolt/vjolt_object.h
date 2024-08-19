@@ -24,7 +24,7 @@ class JoltPhysicsObject final : public IPhysicsObjectInterface
 {
 public:
 	JoltPhysicsObject( JPH::Body *pBody, JoltPhysicsEnvironment *pEnvironment, bool bStatic, int nMaterialIndex, const objectparams_t *pParams );
-	JoltPhysicsObject( JPH::Body *pBody, JoltPhysicsEnvironment *pEnvironment, void *pGameData, JPH::StateRecorder &recorder );
+	JoltPhysicsObject( JPH::Body *pBody, JoltPhysicsEnvironment *pEnvironment, void *pGameData, const char *pName, JPH::StateRecorder &recorder );
 	~JoltPhysicsObject() override;
 
 	bool			IsStatic() const override;

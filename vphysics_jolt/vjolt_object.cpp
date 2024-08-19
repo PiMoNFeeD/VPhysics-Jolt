@@ -64,11 +64,12 @@ JoltPhysicsObject::JoltPhysicsObject( JPH::Body *pBody, JoltPhysicsEnvironment *
 	UpdateMaterialProperties();
 }
 
-JoltPhysicsObject::JoltPhysicsObject( JPH::Body *pBody, JoltPhysicsEnvironment *pEnvironment, void *pGameData, JPH::StateRecorder &recorder )
+JoltPhysicsObject::JoltPhysicsObject( JPH::Body *pBody, JoltPhysicsEnvironment *pEnvironment, void *pGameData, const char *pName, JPH::StateRecorder &recorder )
 	: m_pBody( pBody )
 	, m_pEnvironment( pEnvironment )
 	, m_pPhysicsSystem( pEnvironment->GetPhysicsSystem() )
 	, m_pGameData( pGameData )
+	, m_pName( pName )
 {
 	RestoreObjectState( recorder );
 }
